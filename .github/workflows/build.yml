@@ -1,0 +1,69 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends sdcc binutils make python3
+
+      - name: Show toolchain
+        run: sdcc --version | head -1
+
+      - name: Build firmware
+        run: make firmware
+
+      - name: Assemble web payload
+        run: make dist
+
+      - name: Report sizes
+        run: |
+          echo "### Firmware" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json
+          m = json.load(open('dist/manifest.json'))
+          for f in m['firmwares']:
+              print(f\"{f['id']:<16} {f['size']:>7} B  {f['source']}  {f['method']}\")
+          " >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: dist/firmware/*.bin
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: dist
+
+  deploy:
+    needs: firmware
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
