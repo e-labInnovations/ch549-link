@@ -197,8 +197,23 @@ export class WchIsp {
 
   /* ------------------------------------------------------- whole sequence */
 
-  async flash(image, onProgress) {
-    if (!(image instanceof Uint8Array)) throw new IspError("image must be a Uint8Array");
+  /* The upload protocol requires an 8-byte aligned length; pad with 0xff to
+   * match erased flash. Without this the device's final aligned compare fails
+   * on a short trailing chunk. */
+  static pad8(image) {
+    const len = (image.length + 7) & ~7;
+    if (len === image.length) return image;
+    const out = new Uint8Array(len).fill(0xff);
+    out.set(image);
+    return out;
+  }
+
+  async flash(raw, onProgress) {
+    if (!(raw instanceof Uint8Array)) throw new IspError("image must be a Uint8Array");
+    const image = WchIsp.pad8(raw);
+    if (image.length !== raw.length) {
+      this.log(`padded ${raw.length} -> ${image.length} bytes (8-byte alignment)`);
+    }
     await this.identify();
     await this.readConfig();
     if (image.length > this.chip.codeFlash) {
