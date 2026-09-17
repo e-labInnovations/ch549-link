@@ -1,8 +1,6 @@
-# CH32V003 / CH32X03x single-wire (SWIO) debugger.
-# Speaks the ardulink serial protocol over USB-CDC, so minichlink drives it
-# unmodified:  minichlink -C ardulink -c /dev/ttyACM0
+# CH32V003 single-wire (SWIO) debugger.
 
 TARGET := swio
-SRC    := swio.c
+SRC    := main.c swio.c debug.c
 
 include ../common/common.mk

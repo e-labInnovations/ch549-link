@@ -25,7 +25,10 @@ CFLAGS := -mmcs51 --model-small \
           $(EP_FLAGS) -DFREQ_SYS=48000000 \
           -I$(COMMON_DIR)
 
-COMMON_SRC := $(COMMON_DIR)USBCDC.c \
+COMMON_SRC := $(COMMON_DIR)board.c \
+              $(COMMON_DIR)uart.c \
+              $(COMMON_DIR)usb_serial.c \
+              $(COMMON_DIR)USBCDC.c \
               $(COMMON_DIR)USBconstant.c \
               $(COMMON_DIR)USBhandler.c
 
