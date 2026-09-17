@@ -1,0 +1,345 @@
+/* ch549-link flasher — visual layer.
+ *
+ * One stylesheet, no build step. Dark by default because the tool lives next
+ * to a terminal; light theme follows the OS.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0e14;
+  --bg-soft: #11151f;
+  --panel: #141926;
+  --panel-2: #0e121b;
+  --line: #222a3a;
+  --line-soft: #1a2130;
+
+  --fg: #e7ebf3;
+  --fg-dim: #97a1b5;
+  --fg-faint: #616c80;
+
+  --accent: #7c9cff;
+  --accent-ink: #060a16;
+  --accent-soft: #7c9cff22;
+
+  --ok: #3ddc97;
+  --warn: #f5b942;
+  --err: #ff6b6b;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  --shadow: 0 1px 2px #0006, 0 12px 32px -12px #0009;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f4f6fb;
+    --bg-soft: #eceff7;
+    --panel: #ffffff;
+    --panel-2: #f7f9fd;
+    --line: #dde3ef;
+    --line-soft: #e8edf6;
+    --fg: #131824;
+    --fg-dim: #5a6479;
+    --fg-faint: #8b95a8;
+    --accent: #3b5bdb;
+    --accent-ink: #ffffff;
+    --accent-soft: #3b5bdb14;
+    --ok: #0f9d6e;
+    --warn: #b7791f;
+    --err: #d64545;
+    --shadow: 0 1px 2px #1018280f, 0 10px 28px -14px #10182833;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15.5px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h2 { font-size: 1.15rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+p { margin: 0 0 12px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--panel-2);
+       border: 1px solid var(--line-soft); padding: 1px 5px; border-radius: 5px; }
+a { color: var(--accent); }
+.muted { color: var(--fg-dim); }
+.lead { color: var(--fg-dim); margin: 0 0 18px; }
+.hint { color: var(--fg-faint); font-size: .88rem; }
+
+/* ─────────────────────────────────────────────────────────────── header */
+
+.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: 780px; margin: 0 auto; padding: 22px 18px 10px;
+}
+.brand { display: flex; align-items: center; gap: 11px; }
+.brand .mark {
+  width: 34px; height: 34px; display: grid; place-items: center; font-size: 17px;
+  border-radius: 10px; background: var(--accent-soft);
+  border: 1px solid var(--line);
+}
+.brand strong { display: block; font-size: .98rem; letter-spacing: -.01em; }
+.brand span { display: block; font-size: .8rem; color: var(--fg-faint); }
+
+main { max-width: 780px; margin: 0 auto; padding: 0 18px 56px; }
+
+/* ────────────────────────────────────────────────────────────── stepper */
+
+.stepper {
+  list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  margin: 16px 0 22px; padding: 0; position: relative;
+}
+.stepper li {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  position: relative; color: var(--fg-faint); font-size: .8rem;
+}
+/* connector line, drawn behind each dot except the first */
+.stepper li::before {
+  content: ""; position: absolute; top: 13px; right: 50%; width: 100%; height: 2px;
+  background: var(--line); z-index: 0;
+}
+.stepper li:first-child::before { display: none; }
+.stepper li.done::before { background: var(--accent); }
+
+.stepper .dot {
+  position: relative; z-index: 1;
+  width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--bg); border: 2px solid var(--line);
+  font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  transition: background .18s, border-color .18s, color .18s;
+}
+.stepper li.active .dot { border-color: var(--accent); color: var(--accent); }
+.stepper li.active { color: var(--fg); font-weight: 600; }
+
+/* A completed step swaps its number for a tick: font-size:0 hides the text
+ * node, ::after supplies the mark at its own size. Declared after .active so
+ * the final step, which is both active and done, still shows the tick. */
+.stepper li.done .dot {
+  background: var(--accent); border-color: var(--accent);
+  color: var(--accent-ink); font-size: 0;
+}
+.stepper li.done .dot::after { content: "✓"; font-size: .8rem; }
+
+@media (max-width: 460px) {
+  .stepper .label { display: none; }
+}
+
+/* ──────────────────────────────────────────────────────────────── cards */
+
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+}
+.step { display: none; }
+.step.active { display: block; animation: rise .22s ease-out; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .step.active { animation: none; }
+}
+
+/* ──────────────────────────────────────────── step 1: board photo + how-to */
+
+/* No padding on the figure: it makes every marker percentage below mean
+ * exactly the same thing as a percentage of the image itself. */
+.board {
+  position: relative; margin: 0 0 18px; border-radius: var(--radius-sm);
+  background: var(--panel-2); border: 1px solid var(--line-soft); overflow: hidden;
+}
+.board img { display: block; width: 100%; height: auto; }
+
+.marker {
+  position: absolute; transform: translate(-50%, -50%);
+  border: 2px solid var(--accent); border-radius: 50%;
+  box-shadow: 0 0 0 0 var(--accent-soft);
+  animation: ping 2.2s ease-out infinite;
+}
+.marker b {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-ink); font-size: .72rem; font-weight: 800;
+}
+
+/* Centres and sizes measured off assets/board.png by finding the two silver
+ * components in it - the button is 11.6% x 13.4%, the USB-C shell 14.5% x
+ * 33.4%. Re-measure if the image is ever replaced. */
+.btn-marker { left: 75.7%; top: 82.8%; width: 18%; height: 36%; }
+.usb-marker { left: 80.1%; top: 54.1%; width: 20%; height: 46%; animation-delay: .5s; }
+
+@keyframes ping {
+  0%   { box-shadow: 0 0 0 0 var(--accent-soft); }
+  70%  { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marker { animation: none; }
+}
+
+.howto { margin: 0 0 14px; padding-left: 20px; }
+.howto li { margin-bottom: 5px; }
+
+/* ──────────────────────────────────────────────────── step 2: board specs */
+
+.specs {
+  display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px;
+  margin: 0 0 18px; padding: 14px 16px;
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm); font-size: .9rem;
+}
+.specs dt { color: var(--fg-faint); }
+.specs dd { margin: 0; font-family: var(--mono); font-size: .86rem; word-break: break-all; }
+
+.installed {
+  display: flex; align-items: center; gap: 11px;
+  padding: 13px 15px; margin: 0 0 18px; font-size: .92rem;
+  border: 1px solid var(--line-soft); border-left: 3px solid var(--fg-faint);
+  border-radius: var(--radius-sm); background: var(--panel-2);
+}
+.installed.found { border-left-color: var(--ok); }
+.installed.unknown { border-left-color: var(--warn); }
+.installed strong { font-weight: 650; }
+
+.spinner {
+  flex: none; width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--accent);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─────────────────────────────────────────────── step 3: firmware chooser */
+
+.fw-list { display: grid; gap: 9px; margin-bottom: 18px; }
+
+.fw {
+  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
+  padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.fw:hover { border-color: var(--accent); }
+.fw:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.fw input { margin: 5px 0 0; accent-color: var(--accent); }
+.fw .name { font-weight: 640; }
+.fw .desc { color: var(--fg-dim); font-size: .88rem; margin: 3px 0 5px; }
+.fw .meta { color: var(--fg-faint); font-size: .8rem; font-family: var(--mono); }
+
+.tag {
+  display: inline-block; vertical-align: 1px; margin-left: 7px;
+  font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid currentColor;
+}
+.tag.built { color: var(--accent); }
+.tag.vendor { color: var(--warn); }
+.tag.current { color: var(--ok); }
+
+.custom { margin-bottom: 18px; font-size: .9rem; }
+.custom summary { cursor: pointer; color: var(--fg-dim); }
+.custom > *:not(summary) { margin-top: 10px; }
+.custom input[type=file] { font: inherit; font-size: .85rem; color: var(--fg-dim); }
+
+/* ──────────────────────────────────────────────────── step 4: flash + result */
+
+.summary {
+  padding: 14px 16px; margin-bottom: 18px; font-size: .92rem;
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--warn); border-radius: var(--radius-sm);
+}
+.summary .name { font-weight: 640; }
+.summary .meta { color: var(--fg-faint); font-family: var(--mono); font-size: .8rem; margin-top: 4px; }
+
+.stages {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 7px;
+  margin: 0 0 16px; padding: 0;
+}
+.stages li {
+  font-size: .78rem; font-weight: 600; padding: 4px 11px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--fg-faint);
+}
+.stages li.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.stages li.done { border-color: var(--ok); color: var(--ok); }
+.stages li.done::before { content: "✓ "; }
+
+.bar { height: 8px; border-radius: 999px; background: var(--panel-2);
+       border: 1px solid var(--line-soft); overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: var(--accent); transition: width .1s linear; }
+.bar-label { font-size: .84rem; font-variant-numeric: tabular-nums; margin: 9px 0 0; }
+.bar-label #bar-pct { font-weight: 650; }
+
+.result { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+.result-icon {
+  flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid;
+  place-items: center; font-size: 1.15rem; font-weight: 800;
+}
+.result.ok .result-icon { background: #3ddc9722; color: var(--ok); }
+.result.fail .result-icon { background: #ff6b6b22; color: var(--err); }
+.result h2 { margin-bottom: 3px; }
+.result .lead { margin: 0; }
+
+.next { margin-bottom: 18px; font-size: .92rem; }
+.next h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em;
+           color: var(--fg-faint); margin: 0 0 8px; }
+.next ul { margin: 0 0 12px; padding-left: 20px; }
+.next li { margin-bottom: 4px; }
+
+.cmd {
+  display: flex; gap: 8px; align-items: center;
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm); padding: 9px 11px;
+}
+.cmd code { flex: 1; background: none; border: 0; padding: 0; overflow-x: auto;
+            white-space: pre; font-size: .82rem; }
+
+/* ────────────────────────────────────────────────────────────── buttons */
+
+.btn {
+  font: inherit; font-size: .92rem; font-weight: 600; line-height: 1;
+  padding: 10px 17px; border-radius: 9px; border: 1px solid transparent;
+  cursor: pointer; transition: filter .15s, background .15s, border-color .15s;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 7px;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn.primary.danger { background: var(--warn); color: #1a1205; }
+.btn.ghost { background: transparent; color: var(--fg-dim); border-color: var(--line); }
+.btn.ghost:hover:not(:disabled) { color: var(--fg); border-color: var(--fg-faint); }
+.btn.small { font-size: .82rem; padding: 6px 12px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+/* display on .btn would otherwise beat the [hidden] attribute */
+[hidden] { display: none !important; }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.actions-note { font-size: .82rem; color: var(--fg-faint); }
+
+/* ──────────────────────────────────────────────────────── notice / log */
+
+.notice {
+  padding: 13px 16px; border-radius: var(--radius-sm); font-size: .92rem;
+  margin-bottom: 18px; border: 1px solid var(--line); border-left-width: 3px;
+  background: var(--panel);
+}
+.notice.error { border-left-color: var(--err); }
+
+.log-drawer {
+  margin-top: 18px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 13px 16px;
+}
+.log-drawer summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--fg-dim); }
+.log-drawer[open] summary { margin-bottom: 11px; }
+#log {
+  font-family: var(--mono); font-size: .8rem; line-height: 1.5; white-space: pre-wrap;
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm); padding: 11px; max-height: 260px; overflow: auto;
+  margin-bottom: 10px;
+}
+#log .err { color: var(--err); }
+#log .ok { color: var(--ok); }
+#log .dim { color: var(--fg-faint); }
+
+footer { margin-top: 26px; text-align: center; font-size: .82rem; color: var(--fg-faint); }
+footer p { margin: 0; }

@@ -22,6 +22,14 @@
  *
  * Request framing : [cmd, len_lo, len_hi, ...payload]
  * Response framing: [cmd, _, data_len, _, ...data]
+ *
+ * Session shape:
+ *
+ *     const isp = new WchIsp(device, { log, onStage });
+ *     await isp.connect();          // open, identify, read config, send key
+ *     await isp.matches(image);     // read-only: does flash already hold this?
+ *     await isp.program(image);     // erase, write, verify, reboot
+ *     await isp.close();
  */
 
 export const BOOTLOADER = { vendorId: 0x4348, productId: 0x55e0 };
@@ -49,19 +57,32 @@ export const CHIPS = {
 
 export class IspError extends Error {}
 
+export const hex = (bytes) =>
+  Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("-");
+
 export class WchIsp {
-  constructor(device, log = () => {}) {
+  constructor(device, { log = () => {}, onStage = () => {} } = {}) {
     this.device = device;
     this.log = log;
+    this.onStage = onStage;
     this.chip = null;
     this.uid = null;
     this.key = null;
     this.configData = null;
     this.bootloaderVersion = null;
+    this.configWritten = false;
   }
 
   static async request() {
     return navigator.usb.requestDevice({ filters: [BOOTLOADER] });
+  }
+
+  /* A board already granted in an earlier visit, if it is plugged in now. */
+  static async granted() {
+    const devices = await navigator.usb.getDevices();
+    return devices.find(
+      (d) => d.vendorId === BOOTLOADER.vendorId && d.productId === BOOTLOADER.productId
+    ) ?? null;
   }
 
   async open() {
@@ -122,7 +143,7 @@ export class WchIsp {
     this.bootloaderVersion = `${bv[1]}.${bv[2]}.${bv[3]}`;
     this.uid = d.slice(18, 18 + this.chip.idLen);
     this.log(`bootloader ${this.bootloaderVersion}`);
-    this.log(`uid ${Array.from(this.uid, (b) => b.toString(16).padStart(2, "0")).join("-")}`);
+    this.log(`uid ${hex(this.uid)}`);
     return this.uid;
   }
 
@@ -152,11 +173,14 @@ export class WchIsp {
     return out;
   }
 
+  /* Write back exactly what was read - never alter config bits, they can
+   * disable the bootloader permanently. Done once per session, and only on
+   * the programming path: the read-only identify path must not touch it. */
   async writeConfig() {
-    // write back exactly what was read - never alter config bits, they can
-    // disable the bootloader permanently
+    if (this.configWritten) return;
     const d = await this.transfer(CMD.WRITE_CONFIG, [0x07, 0x00, ...this.configData]);
     if (d.length >= 1 && d[0] !== 0) throw new IspError("write_config failed");
+    this.configWritten = true;
   }
 
   async erase(byteLen) {
@@ -167,6 +191,14 @@ export class WchIsp {
     this.log(`erased ${kib} KiB`);
   }
 
+  /*
+   * Stream an image through WRITE_CODE or VERIFY_CODE.
+   *
+   * Returns the offset of the first chunk the device rejected, or -1 if every
+   * chunk was accepted. Callers that must not tolerate a rejection turn that
+   * offset into an error themselves - a rejected VERIFY chunk is a normal,
+   * expected answer when we are only asking "is this image already here?".
+   */
   async #stream(cmd, image, onProgress) {
     for (let off = 0; off < image.length; off += CHUNK) {
       const slice = image.slice(off, Math.min(off + CHUNK, image.length));
@@ -175,9 +207,7 @@ export class WchIsp {
         off & 0xff, (off >> 8) & 0xff, (off >> 16) & 0xff, (off >> 24) & 0xff,
         0, ...enc,
       ]);
-      if (d.length >= 1 && d[0] !== 0) {
-        throw new IspError(`${cmd === CMD.WRITE_CODE ? "write" : "verify"} failed at offset ${off}`);
-      }
+      if (d.length >= 1 && d[0] !== 0) return off;
       onProgress?.(Math.min(off + CHUNK, image.length), image.length);
     }
     if (cmd === CMD.WRITE_CODE) {
@@ -185,10 +215,18 @@ export class WchIsp {
       const off = image.length;
       await this.transfer(cmd, [off & 0xff, (off >> 8) & 0xff, (off >> 16) & 0xff, (off >> 24) & 0xff, 0]);
     }
+    return -1;
   }
 
-  async writeFlash(image, onProgress) { await this.#stream(CMD.WRITE_CODE, image, onProgress); }
-  async verifyFlash(image, onProgress) { await this.#stream(CMD.VERIFY_CODE, image, onProgress); }
+  async writeFlash(image, onProgress) {
+    const bad = await this.#stream(CMD.WRITE_CODE, image, onProgress);
+    if (bad >= 0) throw new IspError(`write failed at offset ${bad}`);
+  }
+
+  async verifyFlash(image, onProgress) {
+    const bad = await this.#stream(CMD.VERIFY_CODE, image, onProgress);
+    if (bad >= 0) throw new IspError(`verify failed at offset ${bad}`);
+  }
 
   async reboot() {
     try { await this.transfer(CMD.REBOOT, [1]); } catch { /* device vanishes mid-reply */ }
@@ -208,25 +246,69 @@ export class WchIsp {
     return out;
   }
 
-  async flash(raw, onProgress) {
+  /* Open the device and get as far as an authenticated session. Read-only:
+   * nothing here erases or writes. */
+  async connect() {
+    await this.open();
+    this.onStage("identify");
+    await this.identify();
+    await this.readConfig();
+    this.onStage("key");
+    await this.sendKey();
+    return { chip: this.chip, uid: this.uid, bootloaderVersion: this.bootloaderVersion };
+  }
+
+  /*
+   * Does flash already hold this exact image?
+   *
+   * VERIFY_CODE compares without erasing, so this is a safe way to recognise
+   * the installed firmware - the bootloader has no read-flash command, so
+   * comparing against known images is the only way to name what is on there.
+   * A mismatching image is rejected at its first differing chunk, so a wrong
+   * guess costs one transfer, not a full pass.
+   */
+  async matches(raw, onProgress) {
+    const image = WchIsp.pad8(raw);
+    if (image.length > this.chip.codeFlash) return false;
+    const bad = await this.#stream(CMD.VERIFY_CODE, image, onProgress);
+    return bad < 0;
+  }
+
+  /* Erase, write, verify, reboot. This is the only destructive call. */
+  async program(raw, onProgress) {
     if (!(raw instanceof Uint8Array)) throw new IspError("image must be a Uint8Array");
+    if (!this.chip) throw new IspError("connect() first");
+
     const image = WchIsp.pad8(raw);
     if (image.length !== raw.length) {
       this.log(`padded ${raw.length} -> ${image.length} bytes (8-byte alignment)`);
     }
-    await this.identify();
-    await this.readConfig();
     if (image.length > this.chip.codeFlash) {
       throw new IspError(`image ${image.length} B exceeds ${this.chip.codeFlash} B of flash`);
     }
-    await this.sendKey();
+
     await this.writeConfig();
+
+    this.onStage("erase");
     await this.erase(image.length);
+
+    this.onStage("write");
     this.log(`writing ${image.length} bytes...`);
     await this.writeFlash(image, onProgress);
+
+    this.onStage("verify");
     this.log("verifying...");
     await this.verifyFlash(image, onProgress);
     this.log("verified OK");
+
+    this.onStage("reboot");
     await this.reboot();
+    this.onStage("done");
+  }
+
+  /* connect + program, for callers that want the old one-shot behaviour. */
+  async flash(raw, onProgress) {
+    await this.connect();
+    await this.program(raw, onProgress);
   }
 }

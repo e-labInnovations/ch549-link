@@ -109,11 +109,14 @@ def main():
     out_dir = ROOT / args.out
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # web assets
+    # web assets (skip .DS_Store and friends)
+    ignore = shutil.ignore_patterns(".*")
     for item in (ROOT / "web").iterdir():
+        if item.name.startswith("."):
+            continue
         dst = out_dir / item.name
         if item.is_dir():
-            shutil.copytree(item, dst, dirs_exist_ok=True)
+            shutil.copytree(item, dst, dirs_exist_ok=True, ignore=ignore)
         else:
             shutil.copyfile(item, dst)
 

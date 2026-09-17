@@ -4,84 +4,180 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch549-link flasher</title>
-<style>
-  :root {
-    --bg: #0f1115; --panel: #171a21; --line: #272b34;
-    --fg: #e6e8ec; --dim: #9099a8; --accent: #5aa9e6;
-    --ok: #4ec9a0; --warn: #e6b455; --err: #e06c75;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg);
-    font: 15px/1.55 system-ui, -apple-system, sans-serif;
-  }
-  main { max-width: 760px; margin: 0 auto; }
-  h1 { font-size: 1.35rem; margin: 0 0 4px; }
-  .sub { color: var(--dim); margin: 0 0 24px; font-size: .92rem; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-  .panel h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 0 0 12px; }
-  button {
-    background: var(--accent); color: #07101a; border: 0; border-radius: 7px;
-    padding: 9px 16px; font-size: .94rem; font-weight: 600; cursor: pointer;
-  }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
-  .fw { display: flex; gap: 12px; align-items: flex-start; padding: 11px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
-  .fw:hover { border-color: var(--accent); }
-  .fw input { margin-top: 4px; }
-  .fw .name { font-weight: 600; }
-  .fw .meta { color: var(--dim); font-size: .85rem; }
-  .fw .tag { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); margin-left: 6px; }
-  .tag.built { color: var(--ok); border-color: var(--ok); }
-  .tag.vendor { color: var(--warn); border-color: var(--warn); }
-  #log { font-family: var(--mono); font-size: .82rem; white-space: pre-wrap; background: #0b0d11; border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 120px; max-height: 320px; overflow: auto; }
-  .bar { height: 6px; background: #0b0d11; border-radius: 999px; overflow: hidden; margin-top: 10px; }
-  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .12s; }
-  .err { color: var(--err); } .ok { color: var(--ok); } .dim { color: var(--dim); }
-  .warn-box { border-left: 3px solid var(--warn); padding-left: 12px; color: var(--dim); font-size: .88rem; }
-  code { font-family: var(--mono); background: #0b0d11; padding: 1px 5px; border-radius: 4px; font-size: .86em; }
-  a { color: var(--accent); }
-</style>
+<meta name="description" content="Reflash a CH549-based WCH-Link over WebUSB — turn it into a CH32V003 SWIO programmer, or put it back to stock.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚡</text></svg>">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
+
+<header class="top">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">⚡</div>
+    <div>
+      <strong>ch549-link</strong>
+      <span>WCH-Link firmware flasher</span>
+    </div>
+  </div>
+  <a class="btn ghost" href="https://github.com/e-labInnovations/ch549-link" target="_blank" rel="noopener">Source</a>
+</header>
+
 <main>
-  <h1>ch549-link flasher</h1>
-  <p class="sub">Reflash a CH549-based WCH-Link over WebUSB — turn it into a CH32V003 programmer, or put it back to stock.</p>
 
-  <div class="panel">
-    <h2>1 · Enter bootloader</h2>
-    <p class="warn-box">
-      Unplug the WCH-Link. <strong>Hold its button down</strong>, plug the USB cable back in while
-      still holding, then release. The button is only sampled as power arrives — pressing it
-      afterwards does nothing.<br><br>
-      The board should then appear as <code>4348:55e0</code>.
+  <ol class="stepper" id="stepper">
+    <li data-step="1"><span class="dot">1</span><span class="label">Bootloader</span></li>
+    <li data-step="2"><span class="dot">2</span><span class="label">Board</span></li>
+    <li data-step="3"><span class="dot">3</span><span class="label">Firmware</span></li>
+    <li data-step="4"><span class="dot">4</span><span class="label">Flash</span></li>
+  </ol>
+
+  <div class="notice error" id="unsupported" hidden></div>
+
+  <!-- ─────────────────────────────────────────── step 1: bootloader mode -->
+  <section class="card step" data-step="1">
+    <h2>Put the board in bootloader mode</h2>
+    <p class="lead">
+      The CH549's bootloader lives in ROM and cannot be erased, so this is always
+      recoverable. It is entered with the button, not with software.
     </p>
-  </div>
 
-  <div class="panel">
-    <h2>2 · Choose firmware</h2>
-    <div id="firmwares" class="dim">loading manifest…</div>
-  </div>
+    <figure class="board">
+      <img src="./assets/board.png" alt="CH549 WCH-Link clone, top view. The button is at the bottom right, next to the USB-C connector.">
+      <span class="marker btn-marker"><b>1</b></span>
+      <span class="marker usb-marker"><b>2</b></span>
+    </figure>
 
-  <div class="panel">
-    <h2>3 · Flash</h2>
-    <button id="connect">Connect &amp; flash</button>
-    <button id="clear" class="secondary">Clear log</button>
-    <div class="bar"><div id="bar"></div></div>
-    <p class="sub" style="margin:12px 0 0" id="support"></p>
-  </div>
+    <ol class="howto">
+      <li><strong>Unplug</strong> the board from USB.</li>
+      <li><strong>Hold the button</strong> down — marker <b>1</b>, next to the USB connector.</li>
+      <li><strong>Plug the cable back in</strong> — marker <b>2</b> — while still holding.</li>
+      <li><strong>Release.</strong> The board now enumerates as <code>4348:55e0</code>.</li>
+    </ol>
 
-  <div class="panel">
-    <h2>Log</h2>
-    <div id="log" class="dim">ready.</div>
-  </div>
+    <p class="hint">
+      The button is only sampled as power arrives. Pressing it while the board is
+      already powered does nothing — you have to replug.
+    </p>
 
-  <p class="sub">
-    Recovery is always possible — the CH549 bootloader lives in ROM and cannot be erased.
-    If a flash fails, just repeat step 1.
-  </p>
+    <div class="actions">
+      <button id="connect" class="btn primary">Connect board</button>
+      <span class="actions-note">Opens the browser's USB device picker.</span>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────────────────────────── step 2: the board -->
+  <section class="card step" data-step="2">
+    <h2>Board connected</h2>
+    <p class="lead">Reported by the factory bootloader.</p>
+
+    <dl class="specs" id="specs"></dl>
+
+    <div class="installed" id="installed"></div>
+
+    <div class="actions">
+      <button id="to-firmware" class="btn primary">Choose firmware</button>
+      <button id="cancel-scan" class="btn ghost" hidden>Skip check</button>
+      <button id="disconnect" class="btn ghost">Disconnect</button>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── step 3: choose firmware -->
+  <section class="card step" data-step="3">
+    <h2>Choose firmware</h2>
+    <p class="lead">Every image here writes from address 0 and carries its own loader.</p>
+
+    <div id="firmwares" class="fw-list muted">loading manifest…</div>
+
+    <details class="custom">
+      <summary>Flash your own <code>.bin</code></summary>
+      <p class="hint">
+        Must be a complete CH549 image starting at address 0 — a WCH
+        <code>FIRMWARE_*.bin</code> app image will not boot, it has no loader in
+        front of it.
+      </p>
+      <input type="file" id="custom-file" accept=".bin,application/octet-stream">
+    </details>
+
+    <div class="actions">
+      <button id="to-flash" class="btn primary">Continue</button>
+      <button class="btn ghost" data-goto="2">Back</button>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────── step 4: flash -->
+  <section class="card step" data-step="4">
+
+    <div data-view="confirm">
+      <h2>Ready to flash</h2>
+      <p class="lead">This erases the CH549 and writes the image below.</p>
+      <div class="summary" id="flash-summary"></div>
+      <div class="actions">
+        <button id="flash" class="btn primary danger">Erase &amp; flash</button>
+        <button class="btn ghost" data-goto="3">Back</button>
+      </div>
+    </div>
+
+    <div data-view="busy" hidden>
+      <h2>Flashing</h2>
+      <p class="lead">Do not unplug the board.</p>
+      <ol class="stages" id="stages">
+        <li data-stage="erase">Erase</li>
+        <li data-stage="write">Write</li>
+        <li data-stage="verify">Verify</li>
+        <li data-stage="reboot">Reboot</li>
+      </ol>
+      <div class="bar"><div id="bar"></div></div>
+      <p class="bar-label"><span id="bar-pct">0%</span> <span id="bar-note" class="muted"></span></p>
+    </div>
+
+    <div data-view="ok" hidden>
+      <div class="result ok">
+        <div class="result-icon">✓</div>
+        <div>
+          <h2 id="ok-title">Flashed and verified</h2>
+          <p class="lead" id="ok-sub"></p>
+        </div>
+      </div>
+      <div class="next" id="next-steps"></div>
+      <div class="actions">
+        <button id="again" class="btn primary">Flash another</button>
+      </div>
+    </div>
+
+    <div data-view="fail" hidden>
+      <div class="result fail">
+        <div class="result-icon">!</div>
+        <div>
+          <h2>Flash failed</h2>
+          <p class="lead" id="fail-msg"></p>
+        </div>
+      </div>
+      <p class="hint">
+        Nothing is bricked. The bootloader is in ROM — unplug, hold the button,
+        replug, and try again. If it keeps failing at the same offset, open the
+        log below and file an issue with it.
+      </p>
+      <div class="actions">
+        <button id="retry" class="btn primary">Start over</button>
+      </div>
+    </div>
+
+  </section>
+
+  <details class="log-drawer" id="log-drawer">
+    <summary>Log <span class="muted" id="log-count"></span></summary>
+    <div id="log" class="muted">ready.</div>
+    <button id="clear" class="btn ghost small">Clear</button>
+  </details>
+
+  <footer>
+    <p>
+      WebUSB only — Chrome, Edge or Opera, over HTTPS. Firefox and Safari do not
+      implement it.
+    </p>
+  </footer>
+
 </main>
+
 <script type="module" src="./src/app.js"></script>
 </body>
 </html>

@@ -54,8 +54,30 @@ failed writes. Verified by removing and refitting it.
 
 ### Web flasher (no toolchain)
 
-Open the GitHub Pages site, hold the board's button while plugging it in, pick a
-firmware, click. Chrome or Edge only — WebUSB is not implemented in Firefox or Safari.
+Open the GitHub Pages site and follow four steps:
+
+1. **Bootloader** — hold the board's button while plugging it in.
+2. **Board** — chip, UID and bootloader version, plus *which firmware is currently
+   installed*. The bootloader has no read-flash command, so the page finds that out by
+   replaying each known image through the ISP compare command and watching for the
+   first rejection. Nothing is written. See [docs/isp-protocol.md](docs/isp-protocol.md).
+3. **Firmware** — pick one, or supply your own `.bin`.
+4. **Flash** — erase, write, verify, reboot, with a progress bar and a log.
+
+Chrome, Edge or Opera only — WebUSB is not implemented in Firefox or Safari.
+
+#### Developing it
+
+Hardware is the bottleneck, so the flasher can be driven against a simulated CH549
+bootloader instead:
+
+```bash
+python3 tools/mockserve.py
+# http://localhost:8731/?flash=swio&delay=2
+```
+
+`?flash=blank` exercises the "not recognised" path and `?failAt=2016` the failure path.
+The simulator lives in `tools/`, so `make dist` never ships it.
 
 ### Command line
 
@@ -89,7 +111,7 @@ firmware/common/     USB-CDC stack + CH549 headers, shared by all debuggers
 firmware/swio/       CH32V003 single-wire debugger
 vendor-firmware/     WCH's stock images (see that folder's README)
 web/                 WebUSB flasher, deployed to GitHub Pages
-tools/               manifest generator
+tools/               manifest generator + a simulated bootloader for UI work
 docs/                how this works, and how it was worked out
 ```
 

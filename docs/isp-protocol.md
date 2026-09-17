@@ -78,6 +78,36 @@ VERIFY_CODE -> same chunking, same encryption
 REBOOT
 ```
 
+## Reading back: there is no read
+
+The bootloader has **no read-flash command**. `VERIFY_CODE` is the only way to learn
+anything about what is on the chip, and it answers one bit: "does this chunk match?"
+
+The web flasher uses that to name the installed firmware. It replays each known image
+through `VERIFY_CODE` and watches for the first rejection:
+
+```
+connect (CHIP_TYPE, READ_CONFIG, SET_KEY)
+for each candidate image:
+    VERIFY_CODE from offset 0
+    first rejected chunk  -> not this one, try the next
+    no rejection at all   -> this is what is installed
+```
+
+Two properties make it cheap and safe:
+
+- **A wrong guess costs one transfer.** The first chunk differs, the device rejects it,
+  and the candidate is dropped. Only the image that actually matches is streamed in
+  full.
+- **Nothing is written.** `VERIFY_CODE` compares; it does not erase or program. The
+  identify path deliberately skips `WRITE_CONFIG` as well, so a session that only
+  identifies touches no flash at all.
+
+Whether `VERIFY_CODE` is fully reliable without a preceding `WRITE_CONFIG` has not been
+established against WCH's own tooling, which always writes config first. If it turns
+out not to be, the failure mode is benign: every candidate is rejected and the flasher
+reports "not recognised".
+
 ## Warnings
 
 **Never alter the config bits.** Write back exactly what `READ_CONFIG` returned. They
