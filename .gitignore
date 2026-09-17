@@ -3,7 +3,16 @@ firmware/*/build/
 dist/
 
 # sdcc intermediates, in case anyone builds in-tree
-*.rel *.rst *.sym *.lst *.map *.mem *.ihx *.lk *.asm *.adb
+*.rel
+*.rst
+*.sym
+*.lst
+*.map
+*.mem
+*.ihx
+*.lk
+*.asm
+*.adb
 
 # editors / OS
 .DS_Store

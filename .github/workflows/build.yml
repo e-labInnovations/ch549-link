@@ -21,19 +21,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SDCC
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends sdcc binutils make python3
+      # Build in the same container as `make docker` locally, rather than with
+      # the runner's apt SDCC. ubuntu-latest ships SDCC 4.2.0; the vendored
+      # ch55xduino USB sources need 4.5.0, which is why the Dockerfile pins
+      # ubuntu:25.10. Using apt here would silently build against a toolchain
+      # nothing was tested on.
+      - name: Build firmware (SDCC pinned by Dockerfile)
+        run: make docker
 
       - name: Show toolchain
-        run: sdcc --version | head -1
+        run: docker run --rm ch549-link-build sdcc --version | head -1
 
-      - name: Build firmware
-        run: make firmware
-
+      # Not `make dist`: that target would try to rebuild the firmware with a
+      # host SDCC that is not installed. The images already exist by now.
       - name: Assemble web payload
-        run: make dist
+        run: make manifest
 
       - name: Report sizes
         run: |

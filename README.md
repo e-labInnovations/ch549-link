@@ -94,14 +94,18 @@ recoverable: unplug, hold button, plug in, reflash.
 With Docker (no local toolchain):
 
 ```bash
-make docker      # builds firmware/*/build/*.bin
-make dist        # assembles dist/ for the web flasher
+make docker      # builds firmware/*/build/*.bin in a pinned SDCC 4.5.0 image
+make manifest    # assembles dist/ for the web flasher
 ```
+
+The image pin matters: the vendored ch55xduino USB sources need SDCC 4.5.0, and
+Ubuntu's current `sdcc` package is 4.2.0. CI builds through the same Dockerfile for
+that reason.
 
 Or natively, with SDCC 4.5+:
 
 ```bash
-make firmware
+make dist        # firmware + manifest
 ```
 
 ## Layout
