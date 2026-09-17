@@ -82,10 +82,12 @@ a { color: var(--accent); }
 }
 .brand { display: flex; align-items: center; gap: 11px; }
 .brand .mark {
-  width: 34px; height: 34px; display: grid; place-items: center; font-size: 17px;
+  width: 34px; height: 34px; display: grid; place-items: center;
   border-radius: 10px; background: var(--accent-soft);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line); color: var(--fg-dim);
 }
+.brand .mark .wire { stroke: var(--accent); }
+.brand .mark .wire-fill { fill: var(--accent); }
 .brand strong { display: block; font-size: .98rem; letter-spacing: -.01em; }
 .brand span { display: block; font-size: .8rem; color: var(--fg-faint); }
 

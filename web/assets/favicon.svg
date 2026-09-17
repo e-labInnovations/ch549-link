@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none">
+  <style>
+    svg { --chip: #5a6479; --wire: #3b5bdb; }
+    @media (prefers-color-scheme: dark) { svg { --chip: #97a1b5; --wire: #7c9cff; } }
+    .chip { stroke: var(--chip); }
+    .wire { stroke: var(--wire); }
+    .wire-fill { fill: var(--wire); }
+  </style>
+  <g transform="translate(0.542,0.542) scale(1.1458)">
+    <g class="chip" stroke="#5a6479" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4 H6.5 A2.5 2.5 0 0 0 4 6.5 V13.5 A2.5 2.5 0 0 0 6.5 16 H13.5 A2.5 2.5 0 0 0 16 13.5 V8"/>
+      <path d="M1.5 10 H4 M16 10 H18.5 M10 16 V18.5 M10 1.5 V4"/>
+    </g>
+    <path class="wire" d="M16.83 3.17 L10 10" stroke="#3b5bdb" stroke-width="2.2" stroke-linecap="round"/>
+    <circle class="wire-fill" cx="16.83" cy="3.17" r="2.5" fill="#3b5bdb"/>
+    <circle class="wire-fill" cx="10" cy="10" r="1.6" fill="#3b5bdb"/>
+  </g>
+</svg>

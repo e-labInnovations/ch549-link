@@ -1,7 +1,13 @@
-# ch549-link
+<p align="center">
+  <img src="docs/images/logo.png" width="88" alt="">
+</p>
 
-Turn a **CH549-based WCH-Link** into debuggers it was never meant to be — starting
-with a **CH32V003 single-wire (SWIO) programmer**.
+<h1 align="center">ch549-link</h1>
+
+<p align="center">
+  Turn a <strong>CH549-based WCH-Link</strong> into debuggers it was never meant to
+  be — starting with a <strong>CH32V003 single-wire (SWIO) programmer</strong>.
+</p>
 
 WCH's own manual marks CH32V003 as unsupported on this hardware, and vendors sell
 these boards with "CH32V003 not supported" in the listing. Both are correct about the
@@ -20,6 +26,20 @@ so **stock `minichlink` drives it unmodified**. One USB-C cable, no adapter.
 [ardulink]: https://gitlab.com/BlueSyncLine/arduino-ch32v003-swio
 
 ## Hardware
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/wchlink-clone-01.jpg" alt="Top of the board: the CH549 in a 16-pin SOIC, the 5V/3V3 slide switch, the USB-C connector and the bootloader button."></td>
+<td width="50%"><img src="docs/images/wchlink-clone-02.jpg" alt="Underside of the board, silkscreened WCH-LINK RISV-V &amp; ARM, with the pin labels repeated."></td>
+</tr>
+<tr>
+<td align="center"><em>Top — CH549, slide switch, USB-C, button</em></td>
+<td align="center"><em>Bottom — the header labels this project uses</em></td>
+</tr>
+</table>
+
+The header is silkscreened for ARM SWD. The SWIO firmware reuses the `SWDIO` pad as
+the CH32V003's single-wire line — see [Wiring](#wiring).
 
 Any WCH-Link whose MCU is a **CH549** — confirm it before starting:
 

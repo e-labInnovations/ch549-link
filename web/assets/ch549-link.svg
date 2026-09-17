@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="256" height="256"
+     role="img" aria-label="ch549-link" fill="none">
+  <title>ch549-link</title>
+  <style>
+    svg { --chip: #5a6479; --wire: #3b5bdb; }
+    @media (prefers-color-scheme: dark) { svg { --chip: #97a1b5; --wire: #7c9cff; } }
+    .chip { stroke: var(--chip); }
+    .wire { stroke: var(--wire); }
+    .wire-fill { fill: var(--wire); }
+  </style>
+  <g transform="translate(-0.52,0.52)">
+    <g class="chip" stroke="#5a6479" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- package outline, open at the top-right: the SWIO socket -->
+      <path d="M14.5 6.5 H8.75 A2.25 2.25 0 0 0 6.5 8.75 V15.25 A2.25 2.25 0 0 0 8.75 17.5
+               H15.25 A2.25 2.25 0 0 0 17.5 15.25 V9.5"/>
+      <path d="M3.5 12 H6.5 M17.5 12 H20.5 M12 17.5 V20.5 M12 3.5 V6.5"/>
+    </g>
+    <!-- the one wire: enters through the socket, runs unbroken to the die centre -->
+    <g class="wire" stroke="#3b5bdb" stroke-width="1.5" stroke-linecap="round">
+      <circle cx="19.54" cy="4.46" r="2"/>
+      <path d="M18.12 5.87 L12 12"/>
+    </g>
+    <circle class="wire-fill" cx="12" cy="12" r="1.15" fill="#3b5bdb"/>
+  </g>
+</svg>
