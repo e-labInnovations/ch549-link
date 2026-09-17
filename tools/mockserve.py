@@ -2,8 +2,8 @@
 """Serve the web flasher against a simulated CH549 bootloader.
 
 Hardware is the bottleneck on this project, and the flasher's interesting
-states - "firmware identified", "not recognised", "write failed at offset N" -
-are all awkward to reach on a real board. This builds dist/ into a throwaway
+states - a successful flash, "write failed at offset N", an unsupported
+browser - are all awkward to reach on a real board. This builds dist/ into a throwaway
 directory, injects tools/mock-usb.js ahead of the app module, and serves it, so
 every path can be walked in a browser with nothing plugged in.
 
@@ -62,7 +62,7 @@ def main() -> int:
 
         print(f"\nmock bootloader serving on http://localhost:{args.port}/")
         print("  ?flash=swio        board already runs the SWIO debugger")
-        print("  ?flash=blank       erased board, identification should fail")
+        print("  ?flash=blank       erased board")
         print("  ?delay=2           slow the transfers down to watch progress")
         print("  ?failAt=2016       make the write fail at that offset")
         print("\nctrl-c to stop.\n")

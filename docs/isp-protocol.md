@@ -78,35 +78,57 @@ VERIFY_CODE -> same chunking, same encryption
 REBOOT
 ```
 
-## Reading back: there is no read
+## Reading back: there is no read, and verify cannot substitute
 
-The bootloader has **no read-flash command**. `VERIFY_CODE` is the only way to learn
-anything about what is on the chip, and it answers one bit: "does this chunk match?"
+The bootloader has **no read-flash command**. `VERIFY_CODE` is the only window into
+flash contents, and it answers one bit per chunk: "does this match?"
 
-The web flasher uses that to name the installed firmware. It replays each known image
-through `VERIFY_CODE` and watches for the first rejection:
+That looks like it should be enough to identify the installed firmware — replay each
+known image and see which one is accepted. **It is not.** Measured on a CH549 with
+bootloader 2.4.0:
 
-```
-connect (CHIP_TYPE, READ_CONFIG, SET_KEY)
-for each candidate image:
-    VERIFY_CODE from offset 0
-    first rejected chunk  -> not this one, try the next
-    no rejection at all   -> this is what is installed
-```
+> The first `VERIFY_CODE` after power-up answers truthfully. Once any chunk has been
+> rejected, every later `VERIFY_CODE` is rejected too, until the chip is power-cycled.
 
-Two properties make it cheap and safe:
+The evidence, on a board known to be running `WCH-Link_APP_IAP_RV.bin`:
 
-- **A wrong guess costs one transfer.** The first chunk differs, the device rejects it,
-  and the candidate is dropped. Only the image that actually matches is streamed in
-  full.
-- **Nothing is written.** `VERIFY_CODE` compares; it does not erase or program. The
-  identify path deliberately skips `WRITE_CONFIG` as well, so a session that only
-  identifies touches no flash at all.
+| Sequence (one session unless noted) | Result |
+|---|---|
+| `rv` alone, fresh power-up | **match**, all 45784 bytes |
+| `rv`, `rv` — two *successful* verifies | **both match** |
+| `swio` (a true miss), then `rv` | `rv` rejected at offset 0 |
+| …+ `SET_KEY` between | still rejected |
+| …+ `CHIP_TYPE`/`READ_CONFIG`/`SET_KEY` between | still rejected |
+| …+ USB port reset between | still rejected |
+| …+ `WRITE_CONFIG` between | still rejected |
+| …from a brand-new host process | still rejected |
+| unplug and replug | truthful again |
 
-Whether `VERIFY_CODE` is fully reliable without a preceding `WRITE_CONFIG` has not been
-established against WCH's own tooling, which always writes config first. If it turns
-out not to be, the failure mode is benign: every candidate is rejected and the flasher
-reports "not recognised".
+So it is not a per-session limit — two verifies that both *succeed* are fine. It is a
+rejection that latches.
+
+`ERASE_CODE` does clear the latch, which is why **programming is unaffected**: a full
+erase/write/verify on a latched session succeeds, verified on hardware. Only the
+read-only identify path is impossible.
+
+With more than one candidate image this produces confident nonsense — every image
+after the first miss looks like a miss, so whichever candidate happens to be checked
+first is the only one that can ever be reported. A flasher that scanned three images
+in list order was removed for exactly this reason.
+
+### Identify from the USB descriptor instead
+
+Firmware that is *running* says what it is, for free, with no bootloader involved and
+nothing to latch:
+
+| ID | Firmware |
+|---|---|
+| `4348:55e0` | factory ISP bootloader (button was held at power-up) |
+| `1209:c550` | this project's SWIO debugger (CH55xduino CDC descriptors) |
+| `1a86:8010` | stock WCH-Link, RISC-V mode |
+
+All three observed on real hardware. The ARM / CMSIS-DAP mode PID has not been
+observed and is deliberately not guessed here.
 
 ## Warnings
 

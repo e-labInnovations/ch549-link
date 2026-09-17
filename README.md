@@ -77,10 +77,12 @@ failed writes. Verified by removing and refitting it.
 Open the GitHub Pages site and follow four steps:
 
 1. **Bootloader** — hold the board's button while plugging it in.
-2. **Board** — chip, UID and bootloader version, plus *which firmware is currently
-   installed*. The bootloader has no read-flash command, so the page finds that out by
-   replaying each known image through the ISP compare command and watching for the
-   first rejection. Nothing is written. See [docs/isp-protocol.md](docs/isp-protocol.md).
+2. **Board** — chip, UID, bootloader version and flash size, as reported by the
+   factory bootloader. It cannot tell you which firmware is installed; nothing can.
+   To find that out, plug the board in *without* the button and read the USB ID:
+   `1209:c550` is the SWIO debugger, `1a86:8010` is stock WCH-Link in RISC-V mode.
+   Why verify-based identification does not work is written up in
+   [docs/isp-protocol.md](docs/isp-protocol.md).
 3. **Firmware** — pick one, or supply your own `.bin`.
 4. **Flash** — erase, write, verify, reboot, with a progress bar and a log.
 

@@ -27,7 +27,6 @@
  *
  *     const isp = new WchIsp(device, { log, onStage });
  *     await isp.connect();          // open, identify, read config, send key
- *     await isp.matches(image);     // read-only: does flash already hold this?
  *     await isp.program(image);     // erase, write, verify, reboot
  *     await isp.close();
  */
@@ -259,20 +258,27 @@ export class WchIsp {
   }
 
   /*
-   * Does flash already hold this exact image?
+   * There is deliberately no "which firmware is installed?" helper here.
    *
-   * VERIFY_CODE compares without erasing, so this is a safe way to recognise
-   * the installed firmware - the bootloader has no read-flash command, so
-   * comparing against known images is the only way to name what is on there.
-   * A mismatching image is rejected at its first differing chunk, so a wrong
-   * guess costs one transfer, not a full pass.
+   * The bootloader has no read-flash command, so the only way to ask is to
+   * replay a candidate image through VERIFY_CODE. That cannot be used to
+   * identify anything, because of a hardware behaviour measured on a CH549
+   * with bootloader 2.4.0:
+   *
+   *   the first VERIFY_CODE after power-up answers truthfully; once any chunk
+   *   has been rejected, every later VERIFY_CODE is rejected too, until the
+   *   chip is power-cycled.
+   *
+   * SET_KEY, a full re-handshake, a USB port reset and WRITE_CONFIG were all
+   * measured and none of them clear it. So identification gets exactly one
+   * guess per power-up, and with more than one candidate image it reports
+   * confident nonsense - every image after the first miss looks like a miss.
+   *
+   * ERASE_CODE does clear it, which is why programming is unaffected.
+   *
+   * Identify from the USB descriptor of the running firmware instead; see
+   * docs/isp-protocol.md.
    */
-  async matches(raw, onProgress) {
-    const image = WchIsp.pad8(raw);
-    if (image.length > this.chip.codeFlash) return false;
-    const bad = await this.#stream(CMD.VERIFY_CODE, image, onProgress);
-    return bad < 0;
-  }
 
   /* Erase, write, verify, reboot. This is the only destructive call. */
   async program(raw, onProgress) {

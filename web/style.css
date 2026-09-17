@@ -198,23 +198,6 @@ main { max-width: 780px; margin: 0 auto; padding: 0 18px 56px; }
 .specs dt { color: var(--fg-faint); }
 .specs dd { margin: 0; font-family: var(--mono); font-size: .86rem; word-break: break-all; }
 
-.installed {
-  display: flex; align-items: center; gap: 11px;
-  padding: 13px 15px; margin: 0 0 18px; font-size: .92rem;
-  border: 1px solid var(--line-soft); border-left: 3px solid var(--fg-faint);
-  border-radius: var(--radius-sm); background: var(--panel-2);
-}
-.installed.found { border-left-color: var(--ok); }
-.installed.unknown { border-left-color: var(--warn); }
-.installed strong { font-weight: 650; }
-
-.spinner {
-  flex: none; width: 15px; height: 15px; border-radius: 50%;
-  border: 2px solid var(--line); border-top-color: var(--accent);
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* ─────────────────────────────────────────────── step 3: firmware chooser */
 
 .fw-list { display: grid; gap: 9px; margin-bottom: 18px; }
@@ -238,7 +221,6 @@ main { max-width: 780px; margin: 0 auto; padding: 0 18px 56px; }
 }
 .tag.built { color: var(--accent); }
 .tag.vendor { color: var(--warn); }
-.tag.current { color: var(--ok); }
 
 .custom { margin-bottom: 18px; font-size: .9rem; }
 .custom summary { cursor: pointer; color: var(--fg-dim); }

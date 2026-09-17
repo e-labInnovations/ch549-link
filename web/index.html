@@ -91,11 +91,16 @@
 
     <dl class="specs" id="specs"></dl>
 
-    <div class="installed" id="installed"></div>
+    <p class="hint">
+      The bootloader cannot report which firmware is installed — it has no
+      read-flash command. To find that out, plug the board in
+      <strong>without</strong> holding the button and look at how it enumerates:
+      <code>1209:c550</code> is the SWIO debugger, <code>1a86:8010</code> is
+      stock WCH-Link in RISC-V mode.
+    </p>
 
     <div class="actions">
       <button id="to-firmware" class="btn primary">Choose firmware</button>
-      <button id="cancel-scan" class="btn ghost" hidden>Skip check</button>
       <button id="disconnect" class="btn ghost">Disconnect</button>
     </div>
   </section>

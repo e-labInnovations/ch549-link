@@ -10,8 +10,8 @@
  *
  * Query parameters:
  *
- *   ?flash=swio      preload flash with firmware/swio.bin  (identify should hit)
- *   ?flash=blank     preload flash with 0xff               (identify: unknown)
+ *   ?flash=swio      preload flash with firmware/swio.bin
+ *   ?flash=blank     preload flash with 0xff (an erased board)
  *   ?delay=2         milliseconds per USB transfer, to watch progress move
  *   ?failAt=2016     reject every WRITE_CODE at or past this offset
  */

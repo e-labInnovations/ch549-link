@@ -16,23 +16,19 @@ import {
 const state = {
   manifest: null,
   flashable: [],      // manifest entries that can go through the ISP bootloader
-  images: new Map(),  // id -> Uint8Array, so scan and flash fetch once
+  images: new Map(),  // id -> Uint8Array, fetched once
   isp: null,
   selected: null,     // a manifest entry, or a synthetic one for a custom file
-  installed: null,    // id of the image found in flash, or null
 };
 
-/* Every USB sequence runs through here, so a background scan can never
- * interleave with a flash on the same endpoint. */
+/* Every USB sequence runs through here, so two of them can never interleave on
+ * the same endpoint. */
 let queue = Promise.resolve();
 function serial(fn) {
   const run = queue.then(fn, fn);
   queue = run.catch(() => {});
   return run;
 }
-
-class Cancelled extends Error {}
-let scanToken = 0;
 
 /* ─────────────────────────────────────────────────────── browser support */
 
@@ -97,7 +93,6 @@ function renderFirmwares() {
     const body = text("div");
     const name = text("div", "name");
     name.append(fw.name, tag(fw.source, fw.source));
-    if (state.installed === fw.id) name.append(tag("current", "installed"));
 
     body.append(name, text("div", "desc", fw.description));
     body.append(text("div", "meta",
@@ -148,7 +143,6 @@ async function connect() {
     await serial(() => state.isp.connect());
     renderSpecs();
     goto(2);
-    startScan();
   } catch (e) {
     log(`could not talk to the bootloader: ${e.message}`, "err");
     revealLog();
@@ -159,10 +153,7 @@ async function connect() {
 }
 
 async function disconnect() {
-  scanToken++;
   if (state.isp) { await state.isp.close(); state.isp = null; }
-  state.installed = null;
-  renderFirmwares();
   goto(1);
 }
 
@@ -177,73 +168,6 @@ function renderSpecs() {
   const dl = $("specs");
   dl.textContent = "";
   for (const [k, v] of rows) dl.append(text("dt", "", k), text("dd", "", v));
-}
-
-/* ───────────────────────────────────────────────── what is already on it? */
-
-/*
- * The bootloader has no read-flash command, so there is no way to dump what is
- * installed. It does have VERIFY_CODE, which compares without erasing — so we
- * ask "is it this one?" of each known image in turn. A wrong guess is rejected
- * at its first differing chunk, so only a match costs a full pass.
- *
- * Best-effort by design: a board holding something we do not ship reports
- * "not recognised", which is the honest answer, and flashing works either way.
- */
-function startScan() {
-  const token = ++scanToken;
-  $("cancel-scan").hidden = false;
-
-  /* One renderer for all four outcomes: busy, found, unrecognised, skipped. */
-  const show = (cls, busy, ...parts) => {
-    const box = $("installed");
-    box.className = `installed ${cls}`;
-    box.textContent = "";
-    if (busy) box.append(text("span", "spinner"));
-    const line = text("div");
-    line.append(...parts);
-    box.append(line);
-  };
-
-  serial(async () => {
-    try {
-      for (const [i, fw] of state.flashable.entries()) {
-        if (token !== scanToken) throw new Cancelled();
-
-        show("", true,
-          `Identifying installed firmware — checking ${fw.name} `,
-          text("span", "muted", `(${i + 1} of ${state.flashable.length})`));
-
-        const image = await imageFor(fw);
-        const hit = await state.isp.matches(image, () => {
-          if (token !== scanToken) throw new Cancelled();
-        });
-
-        if (hit) {
-          state.installed = fw.id;
-          log(`installed firmware identified: ${fw.name}`, "ok");
-          show("found", false, text("strong", "", "Installed: "), fw.name);
-          renderFirmwares();
-          return;
-        }
-      }
-      state.installed = null;
-      log("installed firmware matches none of the listed images", "dim");
-      show("unknown", false,
-        text("strong", "", "Not recognised. "),
-        "Flash holds something other than the images listed here — or nothing at all.");
-    } catch (e) {
-      if (token !== scanToken || e instanceof Cancelled) {
-        show("", false, text("span", "muted", "Identification skipped."));
-        return;
-      }
-      log(`could not identify installed firmware: ${e.message}`, "dim");
-      show("unknown", false, text("span", "muted",
-        "Could not identify the installed firmware. Flashing still works."));
-    } finally {
-      if (token === scanToken) $("cancel-scan").hidden = true;
-    }
-  });
 }
 
 /* ──────────────────────────────────────────────────────── custom image */
@@ -277,10 +201,6 @@ function renderSummary() {
   host.append(text("div", "name", fw.name));
   host.append(text("div", "meta", `${fw.file}  ·  ${fmtSize(fw.size)}`));
 
-  if (state.installed === fw.id) {
-    host.append(text("div", "hint",
-      "This is already what the board is running. Rewriting it is harmless."));
-  }
   if (fw.source === "vendor") {
     host.append(text("div", "hint",
       "Stock WCH firmware. It does not support CH32V003 — come back here to " +
@@ -320,7 +240,6 @@ async function doFlash() {
   } finally {
     $("flash").disabled = false;
     if (state.isp) { await state.isp.close(); state.isp = null; }
-    scanToken++;
   }
 }
 
@@ -359,13 +278,8 @@ function renderSuccess(fw) {
 
 /* ───────────────────────────────────────────────────────────────── wiring */
 
-setStepLeaveHook((from) => {
-  if (from === 2) scanToken++; // never leave a scan running behind the flow
-});
-
 $("connect").addEventListener("click", connect);
 $("disconnect").addEventListener("click", disconnect);
-$("cancel-scan").addEventListener("click", () => { scanToken++; });
 
 $("to-firmware").addEventListener("click", () => goto(3));
 $("to-flash").addEventListener("click", () => {
