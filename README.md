@@ -13,6 +13,11 @@ WCH's own manual marks CH32V003 as unsupported on this hardware, and vendors sel
 these boards with "CH32V003 not supported" in the listing. Both are correct about the
 **stock firmware**. Neither is correct about the **hardware**.
 
+<p align="center">
+  <img src="docs/images/manual-table6.png" width="600" alt="WCH-Link user manual, Table 6: CH32V003 is marked unsupported (×) for WCH-Link and supported only by WCH-LinkE.">
+  <br><em>WCH-Link manual, Table 6 — CH32V003 marked ✗ for WCH-Link</em>
+</p>
+
 ```
 $ minichlink -C ardulink -c /dev/ttyACM0 -w blink.bin flash -b
 Detected CH32V003
@@ -22,6 +27,11 @@ Image written.
 
 The board enumerates as a USB CDC device and speaks the [ardulink][ardulink] protocol,
 so **stock `minichlink` drives it unmodified**. One USB-C cable, no adapter.
+
+<p align="center">
+  <img src="docs/images/blink-on-breadboard.jpg" width="600" alt="The WCH-Link on a breadboard, wired to a CH32V003 board over SWIO, with an LED lit by the freshly flashed blink program.">
+  <br><em>CH32V003 running blink, flashed through the CH549 WCH-Link</em>
+</p>
 
 [ardulink]: https://gitlab.com/BlueSyncLine/arduino-ch32v003-swio
 
@@ -85,6 +95,31 @@ Open the GitHub Pages site and follow four steps:
    [docs/isp-protocol.md](docs/isp-protocol.md).
 3. **Firmware** — pick one, or supply your own `.bin`.
 4. **Flash** — erase, write, verify, reboot, with a progress bar and a log.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/flasher-connect.png" alt="Step 1: bootloader instructions with a board diagram marking the button and USB connector, and the browser's WebUSB device picker open."></td>
+<td width="50%"><img src="docs/images/flasher-board.png" alt="Step 2: board connected — chip CH549, bootloader 2.4.0, unique ID, 60 KiB code flash."></td>
+</tr>
+<tr>
+<td align="center"><em>1 · Bootloader</em></td>
+<td align="center"><em>2 · Board</em></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/flasher-firmware.png" alt="Step 3: firmware choice — SWIO debugger, stock WCH-Link RISC-V mode, stock WCH-Link ARM mode, or your own .bin."></td>
+<td width="50%"><img src="docs/images/flasher-flashing.png" alt="Step 4: flashing in progress — erase, write, verify, reboot stages with a progress bar."></td>
+</tr>
+<tr>
+<td align="center"><em>3 · Firmware</em></td>
+<td align="center"><em>4 · Flash</em></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/images/flasher-done.png" alt="Done: SWIO debugger written and verified, with next steps and the minichlink usage command."></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><em>Done — verified, rebooted, with the <code>minichlink</code> command to use next</em></td>
+</tr>
+</table>
 
 Chrome, Edge or Opera only — WebUSB is not implemented in Firefox or Safari.
 
