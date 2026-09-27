@@ -18,6 +18,15 @@ these boards with "CH32V003 not supported" in the listing. Both are correct abou
   <br><em>WCH-Link manual, Table 6 — CH32V003 marked ✗ for WCH-Link</em>
 </p>
 
+<p align="center">
+  <a href="https://elabins.com/blog/making-a-wch-link-clone-program-the-unsupported-ch32v003">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://elabins.com/widgets/post/making-a-wch-link-clone-program-the-unsupported-ch32v003.svg?theme=dark">
+      <img alt="Making a WCH-Link clone program the unsupported CH32V003" src="https://elabins.com/widgets/post/making-a-wch-link-clone-program-the-unsupported-ch32v003.svg?theme=light">
+    </picture>
+  </a>
+</p>
+
 ```
 $ minichlink -C ardulink -c /dev/ttyACM0 -w blink.bin flash -b
 Detected CH32V003
